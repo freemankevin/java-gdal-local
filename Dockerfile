@@ -4,9 +4,9 @@ ARG GDAL_VERSION=3.8.5
 ENV DEBIAN_FRONTEND=noninteractive
 ENV JAVA_HOME=/usr/lib/jvm/java-8-openjdk-amd64
 
-# 使用 Debian 官方源，确保包可用性
-RUN echo "deb http://deb.debian.org/debian bookworm main" > /etc/apt/sources.list \
-    && echo "deb http://deb.debian.org/debian-security bookworm-security main" >> /etc/apt/sources.list \
+# 使用国内镜像源加速 apt-get
+RUN echo "deb http://mirrors.tuna.tsinghua.edu.cn/debian bookworm main" > /etc/apt/sources.list \
+    && echo "deb http://mirrors.tuna.tsinghua.edu.cn/debian-security bookworm-security main" >> /etc/apt/sources.list \
     && apt-get update \
     && apt-get install -y --no-install-recommends \
         libproj-dev \
@@ -27,10 +27,13 @@ RUN echo "deb http://deb.debian.org/debian bookworm main" > /etc/apt/sources.lis
     && rm -rf /var/lib/apt/lists/* \
     && apt-get clean
 
-# 下载并缓存 GDAL 源码
+# 下载并解压 GDAL 源码，添加错误检查
 RUN cd /tmp \
-    && wget -q "https://download.osgeo.org/gdal/${GDAL_VERSION}/gdal-${GDAL_VERSION}.tar.gz" \
-    && tar -xzf "gdal-${GDAL_VERSION}.tar.gz"
+    && wget --no-check-certificate "https://download.osgeo.org/gdal/${GDAL_VERSION}/gdal-${GDAL_VERSION}.tar.gz" \
+    && [ -f "gdal-${GDAL_VERSION}.tar.gz" ] || { echo "Failed to download GDAL source"; exit 1; } \
+    && tar -xzf "gdal-${GDAL_VERSION}.tar.gz" \
+    && [ -d "gdal-${GDAL_VERSION}" ] || { echo "Failed to extract GDAL source"; exit 1; } \
+    && [ -f "gdal-${GDAL_VERSION}/configure" ] || { echo "configure script not found"; exit 1; }
 
 # 编译 GDAL，仅保留必要驱动
 RUN cd /tmp/gdal-${GDAL_VERSION} \
@@ -55,9 +58,9 @@ ENV LD_LIBRARY_PATH=/usr/local/lib
 ENV CLASSPATH=/usr/local/share/java/gdal.jar
 ENV JAVA_HOME=/usr/lib/jvm/java-8-openjdk-amd64
 
-# 使用 Debian 官方源
-RUN echo "deb http://deb.debian.org/debian bookworm main" > /etc/apt/sources.list \
-    && echo "deb http://deb.debian.org/debian-security bookworm-security main" >> /etc/apt/sources.list \
+# 使用国内镜像源
+RUN echo "deb http://mirrors.tuna.tsinghua.edu.cn/debian bookworm main" > /etc/apt/sources.list \
+    && echo "deb http://mirrors.tuna.tsinghua.edu.cn/debian-security bookworm-security main" >> /etc/apt/sources.list \
     && apt-get update \
     && apt-get install -y --no-install-recommends \
         libproj25 \
