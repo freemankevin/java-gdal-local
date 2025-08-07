@@ -5,16 +5,19 @@ FROM bellsoft/liberica-openjdk-debian:${JAVA_VERSION}-cds
 
 LABEL maintainer="https://github.com/freemankevin/java-gdal-local"
 LABEL version="1.0"
-LABEL description="Java ${JAVA_VERSION} with GDAL ${GDAL_VERSION} and Java bindings"
+LABEL description="Java with GDAL and Java bindings"
 
-ENV JAVA_VERSION=${JAVA_VERSION}
-ENV GDAL_VERSION=${GDAL_VERSION}
 ENV DEBIAN_FRONTEND=noninteractive
 ENV TZ=Asia/Shanghai
 ENV GDAL_DATA=/usr/local/share/gdal
-ENV LD_LIBRARY_PATH=/usr/local/lib:$LD_LIBRARY_PATH
+ENV LD_LIBRARY_PATH=/usr/local/lib
+ENV CLASSPATH=/usr/local/share/java/gdal.jar
 
-# 一次性安装所有依赖并编译GDAL with Java支持
+# 重新声明ARG以在RUN中使用
+ARG GDAL_VERSION
+ARG JAVA_VERSION
+
+# 安装基础包和依赖
 RUN apt-get update && apt-get install -y \
     tzdata \
     curl \
@@ -46,11 +49,15 @@ RUN apt-get update && apt-get install -y \
     python3-numpy \
     && ln -snf /usr/share/zoneinfo/$TZ /etc/localtime \
     && echo $TZ > /etc/timezone \
-    # 下载并编译GDAL with Java支持
-    && cd /tmp \
-    && wget https://download.osgeo.org/gdal/${GDAL_VERSION}/gdal-${GDAL_VERSION}.tar.gz \
-    && tar -xzf gdal-${GDAL_VERSION}.tar.gz \
-    && cd gdal-${GDAL_VERSION} \
+    && rm -rf /var/lib/apt/lists/* \
+    && apt-get clean
+
+# 下载并编译GDAL
+RUN cd /tmp \
+    && echo "Downloading GDAL version: ${GDAL_VERSION}" \
+    && wget "https://download.osgeo.org/gdal/${GDAL_VERSION}/gdal-${GDAL_VERSION}.tar.gz" \
+    && tar -xzf "gdal-${GDAL_VERSION}.tar.gz" \
+    && cd "gdal-${GDAL_VERSION}" \
     && ./configure \
         --with-java \
         --with-python \
@@ -68,16 +75,10 @@ RUN apt-get update && apt-get install -y \
     && make -j$(nproc) \
     && make install \
     && ldconfig \
-    # 清理临时文件
-    && rm -rf /tmp/gdal-* \
-    && rm -rf /var/lib/apt/lists/* \
-    && apt-get clean
+    && rm -rf /tmp/gdal-*
 
 # 验证GDAL安装
 RUN gdalinfo --version && echo "GDAL安装成功"
-
-# 设置Java GDAL绑定的CLASSPATH
-ENV CLASSPATH="/usr/local/share/java/gdal.jar:$CLASSPATH"
 
 # 设置工作目录
 WORKDIR /app

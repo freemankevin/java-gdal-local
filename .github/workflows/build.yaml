@@ -57,3 +57,5 @@ jobs:
         build-args: |
           GDAL_VERSION=${{ inputs.gdal_version || '3.4.3' }}
           JAVA_VERSION=${{ inputs.java_version || '8' }}
+        cache-from: type=gha
+        cache-to: type=gha,mode=max
