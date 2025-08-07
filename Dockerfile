@@ -30,20 +30,20 @@ RUN cd /tmp \
     && wget --no-check-certificate "https://download.osgeo.org/gdal/${GDAL_VERSION}/gdal-${GDAL_VERSION}.tar.gz" \
     && [ -f "gdal-${GDAL_VERSION}.tar.gz" ] || { echo "Failed to download GDAL source"; exit 1; } \
     && tar -xzf "gdal-${GDAL_VERSION}.tar.gz" \
-    && ls -l /tmp/gdal-${GDAL_VERSION} \
-    && [ -d "gdal-${GDAL_VERSION}" ] || { echo "Failed to extract GDAL source"; exit 1; } \
-    && [ -f "gdal-${GDAL_VERSION}/configure" ] || { echo "configure script not found"; exit 1; }
+    && [ -d "gdal-${GDAL_VERSION}" ] || { echo "Failed to extract GDAL source"; exit 1; }
 
-# 编译 GDAL，仅保留必要驱动
-# 编译 GDAL，使用 CMake
+# 使用 CMake 编译 GDAL
 RUN cd /tmp/gdal-${GDAL_VERSION} \
-    && ./configure \
-        --with-java=${JAVA_HOME} \
-        --with-python \
-        --with-geos \
-        --with-proj \
-        --with-curl \
-        --with-openfilegdb \
+    && mkdir build \
+    && cd build \
+    && cmake .. \
+        -DCMAKE_INSTALL_PREFIX=/usr/local \
+        -DBUILD_JAVA_BINDINGS=ON \
+        -DJava_JAR_EXECUTABLE=${JAVA_HOME}/bin/jar \
+        -DJava_JAVAC_EXECUTABLE=${JAVA_HOME}/bin/javac \
+        -DJava_JAVAH_EXECUTABLE=${JAVA_HOME}/bin/javah \
+        -DJava_JAVADOC_EXECUTABLE=${JAVA_HOME}/bin/javadoc \
+        -DGDAL_ENABLE_DRIVER_OPENFILEGDB=ON \
     && make -j$(nproc) \
     && make install \
     && ldconfig \
