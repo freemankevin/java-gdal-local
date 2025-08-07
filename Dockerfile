@@ -5,9 +5,7 @@ ENV DEBIAN_FRONTEND=noninteractive
 ENV JAVA_HOME=/usr/lib/jvm/java-8-openjdk-amd64
 
 # 使用国内镜像源加速 apt-get
-RUN echo "deb http://mirrors.tuna.tsinghua.edu.cn/debian bookworm main" > /etc/apt/sources.list \
-    && echo "deb http://mirrors.tuna.tsinghua.edu.cn/debian-security bookworm-security main" >> /etc/apt/sources.list \
-    && apt-get update \
+RUN apt-get update \
     && apt-get install -y --no-install-recommends \
         libproj-dev=7.2* \
         libgeos-dev \
