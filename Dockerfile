@@ -30,7 +30,7 @@ RUN cd /tmp \
     && wget --no-check-certificate "https://download.osgeo.org/gdal/${GDAL_VERSION}/gdal-${GDAL_VERSION}.tar.gz" \
     && [ -f "gdal-${GDAL_VERSION}.tar.gz" ] || { echo "Failed to download GDAL source"; exit 1; } \
     && tar -xzf "gdal-${GDAL_VERSION}.tar.gz" \
-    && ls -l /tmp/gdal-${GDAL_VERSION} \  # 调试用，构建成功后可以移除
+    && ls -l /tmp/gdal-${GDAL_VERSION} \
     && [ -d "gdal-${GDAL_VERSION}" ] || { echo "Failed to extract GDAL source"; exit 1; } \
     && [ -f "gdal-${GDAL_VERSION}/configure" ] || { echo "configure script not found"; exit 1; }
 
