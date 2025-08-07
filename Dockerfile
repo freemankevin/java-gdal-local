@@ -4,12 +4,14 @@ ARG GDAL_VERSION=3.8.5
 ENV DEBIAN_FRONTEND=noninteractive
 ENV JAVA_HOME=/usr/lib/jvm/java-8-openjdk-amd64
 
-# 使用国内镜像源加速 apt-get
-RUN apt-get update \
+# 使用 Debian 官方源，确保包可用性
+RUN echo "deb http://deb.debian.org/debian bookworm main" > /etc/apt/sources.list \
+    && echo "deb http://deb.debian.org/debian-security bookworm-security main" >> /etc/apt/sources.list \
+    && apt-get update \
     && apt-get install -y --no-install-recommends \
-        libproj-dev=7.2* \
+        libproj-dev \
         libgeos-dev \
-        libtiff-dev=4.5* \
+        libtiff-dev \
         libgeotiff-dev \
         libcurl4-gnutls-dev \
         libxml2-dev \
@@ -42,7 +44,7 @@ RUN cd /tmp/gdal-${GDAL_VERSION} \
     && make -j$(nproc) \
     && make install \
     && ldconfig \
-    && rm -rf /tim/gdal-*
+    && rm -rf /tmp/gdal-*
 
 # 运行时阶段
 FROM bellsoft/liberica-openjdk-debian:8-cds
@@ -53,8 +55,10 @@ ENV LD_LIBRARY_PATH=/usr/local/lib
 ENV CLASSPATH=/usr/local/share/java/gdal.jar
 ENV JAVA_HOME=/usr/lib/jvm/java-8-openjdk-amd64
 
-# 使用国内镜像源
-RUN apt-get update \
+# 使用 Debian 官方源
+RUN echo "deb http://deb.debian.org/debian bookworm main" > /etc/apt/sources.list \
+    && echo "deb http://deb.debian.org/debian-security bookworm-security main" >> /etc/apt/sources.list \
+    && apt-get update \
     && apt-get install -y --no-install-recommends \
         libproj25 \
         libgeos-c1v5 \
