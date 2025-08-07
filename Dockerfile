@@ -5,9 +5,7 @@ ENV DEBIAN_FRONTEND=noninteractive
 ENV JAVA_HOME=/usr/lib/jvm/java-8-openjdk-amd64
 
 # 使用国内镜像源加速 apt-get
-RUN echo "deb http://mirrors.tuna.tsinghua.edu.cn/debian bookworm main" > /etc/apt/sources.list \
-    && echo "deb http://mirrors.tuna.tsinghua.edu.cn/debian-security bookworm-security main" >> /etc/apt/sources.list \
-    && apt-get update \
+RUN apt-get update \
     && apt-get install -y --no-install-recommends \
         libproj-dev \
         libgeos-dev \
@@ -39,21 +37,17 @@ RUN cd /tmp \
 # 编译 GDAL，仅保留必要驱动
 # 编译 GDAL，使用 CMake
 RUN cd /tmp/gdal-${GDAL_VERSION} \
-    && mkdir build \
-    && cd build \
-    && cmake .. \
-        -DCMAKE_BUILD_TYPE=Release \
-        -DENABLE_TESTS=OFF \
-        -DCMAKE_INSTALL_PREFIX=/usr/local \
-        -DGDAL_JAVA_BINDINGS=ON \
-        -DJAVA_HOME=${JAVA_HOME} \
-        -DGDAL_USE_GEOS=ON \
-        -DGDAL_USE_PROJ=ON \
-        -DGDAL_USE_CURL=ON \
-        -DGDAL_USE_OPENFILEGDB=ON \
+    && ./configure \
+        --with-java=${JAVA_HOME} \
+        --with-python \
+        --with-geos \
+        --with-proj \
+        --with-curl \
+        --with-openfilegdb \
     && make -j$(nproc) \
     && make install \
-    && ldconfig
+    && ldconfig \
+    && rm -rf /tmp/gdal-*
 
 # 运行时阶段
 FROM bellsoft/liberica-openjdk-debian:8-cds
