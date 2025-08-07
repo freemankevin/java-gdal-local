@@ -2,7 +2,8 @@
 FROM bellsoft/liberica-openjdk-debian:8-cds AS builder
 ARG GDAL_VERSION=3.8.5
 ENV DEBIAN_FRONTEND=noninteractive
-ENV JAVA_HOME=/usr/lib/jvm/java-8-openjdk-amd64
+ENV JAVA_HOME=/usr/lib/jvm/jdk-8u462-bellsoft-x86_64
+
 
 # 使用国内镜像源加速 apt-get
 RUN apt-get update \
@@ -15,6 +16,7 @@ RUN apt-get update \
         libxml2-dev \
         libexpat-dev \
         libzstd-dev \
+        libjni-dev \
         build-essential \
         cmake \
         swig \
