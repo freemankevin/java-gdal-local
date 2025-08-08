@@ -2,7 +2,18 @@
 FROM bellsoft/liberica-openjdk-debian:8-cds AS builder
 ARG GDAL_VERSION=3.8.5
 ENV DEBIAN_FRONTEND=noninteractive
-ENV JAVA_HOME=/usr/lib/jvm/jdk-8u462-bellsoft-x86_64
+
+# 动态设置 JAVA_HOME，支持多架构
+RUN if [ "$(uname -m)" = "x86_64" ]; then \
+        export JAVA_HOME_ARCH="x86_64"; \
+    elif [ "$(uname -m)" = "aarch64" ]; then \
+        export JAVA_HOME_ARCH="aarch64"; \
+    else \
+        export JAVA_HOME_ARCH="$(uname -m)"; \
+    fi && \
+    echo "JAVA_HOME=/usr/lib/jvm/jdk-8u462-bellsoft-${JAVA_HOME_ARCH}" >> /etc/environment
+
+ENV JAVA_HOME=/usr/lib/jvm/java-8-openjdk-$(dpkg --print-architecture)
 
 # 使用国内镜像源加速 apt-get
 RUN apt-get update \
@@ -15,7 +26,7 @@ RUN apt-get update \
         libxml2-dev \
         libexpat-dev \
         libzstd-dev \
-        default-jdk-headless \
+        openjdk-8-jdk \
         ant \
         build-essential \
         cmake \
@@ -29,6 +40,19 @@ RUN apt-get update \
     && rm -rf /var/lib/apt/lists/* \
     && apt-get clean
 
+# 重新设置 JAVA_HOME 确保指向正确的架构
+RUN export ARCH=$(dpkg --print-architecture) && \
+    if [ -d "/usr/lib/jvm/java-8-openjdk-${ARCH}" ]; then \
+        export JAVA_HOME="/usr/lib/jvm/java-8-openjdk-${ARCH}"; \
+    else \
+        export JAVA_HOME="/usr/lib/jvm/java-8-openjdk-$(uname -m)"; \
+    fi && \
+    echo "JAVA_HOME=${JAVA_HOME}" >> /etc/environment && \
+    echo "Selected JAVA_HOME: ${JAVA_HOME}" && \
+    ls -la ${JAVA_HOME}/include/ || echo "JNI headers not found"
+
+ENV JAVA_HOME=/usr/lib/jvm/java-8-openjdk-$(dpkg --print-architecture)
+
 # 下载并解压 GDAL 源码，添加错误检查
 RUN cd /tmp \
     && wget --no-check-certificate "https://download.osgeo.org/gdal/${GDAL_VERSION}/gdal-${GDAL_VERSION}.tar.gz" \
@@ -37,9 +61,14 @@ RUN cd /tmp \
     && [ -d "gdal-${GDAL_VERSION}" ] || { echo "Failed to extract GDAL source"; exit 1; }
 
 # 使用 CMake 编译 GDAL，修复 Java 路径配置
-RUN cd /tmp/gdal-${GDAL_VERSION} \
+RUN export ARCH=$(dpkg --print-architecture) && \
+    export JAVA_HOME="/usr/lib/jvm/java-8-openjdk-${ARCH}" && \
+    cd /tmp/gdal-${GDAL_VERSION} \
     && mkdir build \
     && cd build \
+    && echo "Using JAVA_HOME: ${JAVA_HOME}" \
+    && echo "JNI include path: ${JAVA_HOME}/include" \
+    && ls -la ${JAVA_HOME}/include/ \
     && cmake .. \
         -DCMAKE_INSTALL_PREFIX=/usr/local \
         -DBUILD_JAVA_BINDINGS=ON \
@@ -67,7 +96,7 @@ ENV TZ=Asia/Shanghai
 ENV GDAL_DATA=/usr/local/share/gdal
 ENV LD_LIBRARY_PATH=/usr/local/lib
 ENV CLASSPATH="/usr/local/share/java/gdal.jar"
-ENV JAVA_HOME=/usr/lib/jvm/jdk-8u462-bellsoft-x86_64
+ENV JAVA_HOME=/usr/lib/jvm/java-8-openjdk-$(dpkg --print-architecture)
 
 # 安装运行时依赖
 RUN apt-get update \
