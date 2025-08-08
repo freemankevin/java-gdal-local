@@ -15,7 +15,6 @@ RUN sed -i 's/deb.debian.org/mirrors.aliyun.com/g' /etc/apt/sources.list.d/debia
         libxml2-dev \
         libexpat-dev \
         libzstd-dev \
-        openjdk-8-jdk \
         ant \
         build-essential \
         cmake \
@@ -29,9 +28,9 @@ RUN sed -i 's/deb.debian.org/mirrors.aliyun.com/g' /etc/apt/sources.list.d/debia
     && rm -rf /var/lib/apt/lists/* \
     && apt-get clean
 
-# 动态设置 JAVA_HOME，支持多架构
+# 动态设置 JAVA_HOME，适配 Liberica JDK
 RUN ARCH=$(dpkg --print-architecture) && \
-    JAVA_HOME="/usr/lib/jvm/java-8-openjdk-${ARCH}" && \
+    JAVA_HOME="/usr/lib/jvm/jdk-8u462-bellsoft-${ARCH}" && \
     if [ -d "${JAVA_HOME}" ]; then \
         echo "JAVA_HOME=${JAVA_HOME}" >> /etc/environment; \
         echo "Selected JAVA_HOME: ${JAVA_HOME}"; \
@@ -42,7 +41,7 @@ RUN ARCH=$(dpkg --print-architecture) && \
     ls -la ${JAVA_HOME}/include/ || { echo "JNI headers not found"; exit 1; }
 
 # 设置环境变量
-ENV JAVA_HOME=/usr/lib/jvm/java-8-openjdk-amd64
+ENV JAVA_HOME=/usr/lib/jvm/jdk-8u462-bellsoft-amd64
 ENV PATH=$JAVA_HOME/bin:$PATH
 
 # 下载并解压 GDAL 源码，添加错误检查
@@ -52,9 +51,9 @@ RUN cd /tmp \
     && tar -xzf "gdal-${GDAL_VERSION}.tar.gz" \
     && [ -d "gdal-${GDAL_VERSION}" ] || { echo "Failed to extract GDAL source"; exit 1; }
 
-# 使用 CMake 编译 GDAL，修复 Java 路径配置
+# 使用 CMake 编译 GDAL
 RUN ARCH=$(dpkg --print-architecture) && \
-    JAVA_HOME="/usr/lib/jvm/java-8-openjdk-${ARCH}" && \
+    JAVA_HOME="/usr/lib/jvm/jdk-8u462-bellsoft-${ARCH}" && \
     cd /tmp/gdal-${GDAL_VERSION} \
     && mkdir build \
     && cd build \
@@ -91,11 +90,11 @@ ENV CLASSPATH="/usr/local/share/java/gdal.jar"
 
 # 动态设置 JAVA_HOME
 RUN ARCH=$(dpkg --print-architecture) && \
-    JAVA_HOME="/usr/lib/jvm/java-8-openjdk-${ARCH}" && \
+    JAVA_HOME="/usr/lib/jvm/jdk-8u462-bellsoft-${ARCH}" && \
     echo "JAVA_HOME=${JAVA_HOME}" >> /etc/environment && \
     echo "Selected JAVA_HOME: ${JAVA_HOME}"
 
-ENV JAVA_HOME=/usr/lib/jvm/java-8-openjdk-amd64
+ENV JAVA_HOME=/usr/lib/jvm/jdk-8u462-bellsoft-amd64
 ENV PATH=$JAVA_HOME/bin:$PATH
 
 # 安装运行时依赖
