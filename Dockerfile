@@ -16,6 +16,7 @@ RUN apt-get update \
         libexpat-dev \
         libzstd-dev \
         default-jdk-headless \
+        ant \
         build-essential \
         cmake \
         swig \
@@ -24,6 +25,7 @@ RUN apt-get update \
         python3-setuptools \
         wget \
         pkg-config \
+        bison \
     && rm -rf /var/lib/apt/lists/* \
     && apt-get clean
 
@@ -64,7 +66,7 @@ ENV DEBIAN_FRONTEND=noninteractive
 ENV TZ=Asia/Shanghai
 ENV GDAL_DATA=/usr/local/share/gdal
 ENV LD_LIBRARY_PATH=/usr/local/lib
-ENV CLASSPATH=/usr/local/share/java/gdal.jar:$CLASSPATH
+ENV CLASSPATH="/usr/local/share/java/gdal.jar"
 ENV JAVA_HOME=/usr/lib/jvm/jdk-8u462-bellsoft-x86_64
 
 # 安装运行时依赖
