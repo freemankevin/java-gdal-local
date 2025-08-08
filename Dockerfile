@@ -4,8 +4,7 @@ ARG GDAL_VERSION=3.8.5
 ENV DEBIAN_FRONTEND=noninteractive
 
 # 使用国内镜像源加速 apt-get
-RUN sed -i 's/deb.debian.org/mirrors.aliyun.com/g' /etc/apt/sources.list.d/debian.sources \
-    && apt-get update \
+RUN apt-get update \
     && apt-get install -y --no-install-recommends \
         libproj-dev \
         libgeos-dev \
