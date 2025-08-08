@@ -56,7 +56,7 @@ jobs:
         id: meta
         uses: docker/metadata-action@v5
         with:
-          images: freelabspace/java-gdal
+          images: freelabspace/java-gdal-local
           tags: |
             type=raw,value=java${{ inputs.java_version || '8' }}-gdal${{ inputs.gdal_version || '3.8.5' }}
             type=raw,value=latest
