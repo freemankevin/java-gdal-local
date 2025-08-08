@@ -4,7 +4,6 @@ ARG GDAL_VERSION=3.8.5
 ENV DEBIAN_FRONTEND=noninteractive
 ENV JAVA_HOME=/usr/lib/jvm/jdk-8u462-bellsoft-x86_64
 
-
 # 使用国内镜像源加速 apt-get
 RUN apt-get update \
     && apt-get install -y --no-install-recommends \
@@ -16,7 +15,7 @@ RUN apt-get update \
         libxml2-dev \
         libexpat-dev \
         libzstd-dev \
-        libjni-dev \
+        default-jdk-headless \
         build-essential \
         cmake \
         swig \
@@ -24,6 +23,7 @@ RUN apt-get update \
         python3-numpy \
         python3-setuptools \
         wget \
+        pkg-config \
     && rm -rf /var/lib/apt/lists/* \
     && apt-get clean
 
@@ -34,18 +34,25 @@ RUN cd /tmp \
     && tar -xzf "gdal-${GDAL_VERSION}.tar.gz" \
     && [ -d "gdal-${GDAL_VERSION}" ] || { echo "Failed to extract GDAL source"; exit 1; }
 
-# 使用 CMake 编译 GDAL
+# 使用 CMake 编译 GDAL，修复 Java 路径配置
 RUN cd /tmp/gdal-${GDAL_VERSION} \
     && mkdir build \
     && cd build \
     && cmake .. \
         -DCMAKE_INSTALL_PREFIX=/usr/local \
         -DBUILD_JAVA_BINDINGS=ON \
+        -DJAVA_HOME=${JAVA_HOME} \
         -DJava_JAR_EXECUTABLE=${JAVA_HOME}/bin/jar \
         -DJava_JAVAC_EXECUTABLE=${JAVA_HOME}/bin/javac \
         -DJava_JAVAH_EXECUTABLE=${JAVA_HOME}/bin/javah \
         -DJava_JAVADOC_EXECUTABLE=${JAVA_HOME}/bin/javadoc \
+        -DJAVA_INCLUDE_PATH=${JAVA_HOME}/include \
+        -DJAVA_INCLUDE_PATH2=${JAVA_HOME}/include/linux \
         -DGDAL_ENABLE_DRIVER_OPENFILEGDB=ON \
+        -DGDAL_USE_PROJ=ON \
+        -DGDAL_USE_GEOS=ON \
+        -DGDAL_USE_GEOTIFF=ON \
+        -DGDAL_USE_CURL=ON \
     && make -j$(nproc) \
     && make install \
     && ldconfig \
@@ -57,10 +64,10 @@ ENV DEBIAN_FRONTEND=noninteractive
 ENV TZ=Asia/Shanghai
 ENV GDAL_DATA=/usr/local/share/gdal
 ENV LD_LIBRARY_PATH=/usr/local/lib
-ENV CLASSPATH=/usr/local/share/java/gdal.jar
-ENV JAVA_HOME=/usr/lib/jvm/java-8-openjdk-amd64
+ENV CLASSPATH=/usr/local/share/java/gdal.jar:$CLASSPATH
+ENV JAVA_HOME=/usr/lib/jvm/jdk-8u462-bellsoft-x86_64
 
-# 使用国内镜像源
+# 安装运行时依赖
 RUN apt-get update \
     && apt-get install -y --no-install-recommends \
         libproj25 \
@@ -71,23 +78,37 @@ RUN apt-get update \
         libxml2 \
         libexpat1 \
         libzstd1 \
+        ca-certificates \
     && ln -snf /usr/share/zoneinfo/$TZ /etc/localtime \
     && echo $TZ > /etc/timezone \
     && rm -rf /var/lib/apt/lists/* \
     && apt-get clean
 
+# 从构建阶段复制编译结果
 COPY --from=builder /usr/local /usr/local
+
+# 确保库文件可以找到
+RUN ldconfig
 
 # 验证 GDAL 安装
 RUN gdalinfo --version && echo "GDAL安装成功"
 
 WORKDIR /app
+
+# 创建测试文件
 RUN echo 'import org.gdal.gdal.gdal; \
 public class GDALTest { \
     public static void main(String[] args) { \
-        gdal.AllRegister(); \
-        System.out.println("GDAL version: " + gdal.VersionInfo()); \
-        System.out.println("Java GDAL bindings loaded successfully!"); \
+        try { \
+            gdal.AllRegister(); \
+            System.out.println("GDAL version: " + gdal.VersionInfo()); \
+            System.out.println("Java GDAL bindings loaded successfully!"); \
+        } catch (UnsatisfiedLinkError e) { \
+            System.err.println("Failed to load GDAL native library: " + e.getMessage()); \
+            System.err.println("Library path: " + System.getProperty("java.library.path")); \
+        } catch (Exception e) { \
+            System.err.println("Error: " + e.getMessage()); \
+        } \
     } \
 }' > /app/GDALTest.java
 
