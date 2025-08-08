@@ -3,7 +3,7 @@ FROM bellsoft/liberica-openjdk-debian:8-cds AS builder
 ARG GDAL_VERSION=3.8.5
 ENV DEBIAN_FRONTEND=noninteractive
 
-# 使用国内镜像源加速 apt-get
+# 安装编译 GDAL 所需的依赖
 RUN apt-get update \
     && apt-get install -y --no-install-recommends \
         libproj-dev \
@@ -29,18 +29,20 @@ RUN apt-get update \
 
 # 动态设置 JAVA_HOME，适配 Liberica JDK
 RUN ARCH=$(dpkg --print-architecture) && \
-    JAVA_HOME="/usr/lib/jvm/jdk-8u462-bellsoft-${ARCH}" && \
-    if [ -d "${JAVA_HOME}" ]; then \
-        echo "JAVA_HOME=${JAVA_HOME}" >> /etc/environment; \
-        echo "Selected JAVA_HOME: ${JAVA_HOME}"; \
+    if [ "${ARCH}" = "amd64" ]; then \
+        JAVA_HOME="/usr/lib/jvm/bellsoft-java8-amd64"; \
+    elif [ "${ARCH}" = "arm64" ]; then \
+        JAVA_HOME="/usr/lib/jvm/bellsoft-java8-arm64"; \
     else \
-        echo "Error: JAVA_HOME directory ${JAVA_HOME} not found"; \
+        echo "Unsupported architecture: ${ARCH}"; \
         exit 1; \
     fi && \
+    echo "JAVA_HOME=${JAVA_HOME}" >> /etc/environment && \
+    echo "Selected JAVA_HOME: ${JAVA_HOME}" && \
     ls -la ${JAVA_HOME}/include/ || { echo "JNI headers not found"; exit 1; }
 
 # 设置环境变量
-ENV JAVA_HOME=/usr/lib/jvm/jdk-8u462-bellsoft-amd64
+ENV JAVA_HOME=/usr/lib/jvm/bellsoft-java8-amd64
 ENV PATH=$JAVA_HOME/bin:$PATH
 
 # 下载并解压 GDAL 源码，添加错误检查
@@ -52,7 +54,11 @@ RUN cd /tmp \
 
 # 使用 CMake 编译 GDAL
 RUN ARCH=$(dpkg --print-architecture) && \
-    JAVA_HOME="/usr/lib/jvm/jdk-8u462-bellsoft-${ARCH}" && \
+    if [ "${ARCH}" = "amd64" ]; then \
+        JAVA_HOME="/usr/lib/jvm/bellsoft-java8-amd64"; \
+    elif [ "${ARCH}" = "arm64" ]; then \
+        JAVA_HOME="/usr/lib/jvm/bellsoft-java8-arm64"; \
+    fi && \
     cd /tmp/gdal-${GDAL_VERSION} \
     && mkdir build \
     && cd build \
@@ -89,11 +95,18 @@ ENV CLASSPATH="/usr/local/share/java/gdal.jar"
 
 # 动态设置 JAVA_HOME
 RUN ARCH=$(dpkg --print-architecture) && \
-    JAVA_HOME="/usr/lib/jvm/jdk-8u462-bellsoft-${ARCH}" && \
+    if [ "${ARCH}" = "amd64" ]; then \
+        JAVA_HOME="/usr/lib/jvm/bellsoft-java8-amd64"; \
+    elif [ "${ARCH}" = "arm64" ]; then \
+        JAVA_HOME="/usr/lib/jvm/bellsoft-java8-arm64"; \
+    else \
+        echo "Unsupported architecture: ${ARCH}"; \
+        exit 1; \
+    fi && \
     echo "JAVA_HOME=${JAVA_HOME}" >> /etc/environment && \
     echo "Selected JAVA_HOME: ${JAVA_HOME}"
 
-ENV JAVA_HOME=/usr/lib/jvm/jdk-8u462-bellsoft-amd64
+ENV JAVA_HOME=/usr/lib/jvm/bellsoft-java8-amd64
 ENV PATH=$JAVA_HOME/bin:$PATH
 
 # 安装运行时依赖
